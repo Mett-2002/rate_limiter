@@ -1,5 +1,5 @@
--- One list stores ACCEPTED timestamps for one API client/user pair.
--- All work runs atomically: another request cannot interrupt this script.
+-- Accepted timestamps for one API client/user pair.
+-- Redis runs this script atomically.
 local key = KEYS[1]
 local limit = tonumber(ARGV[1])
 local window_us = tonumber(ARGV[2])

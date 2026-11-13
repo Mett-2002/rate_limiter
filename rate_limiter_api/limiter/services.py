@@ -37,7 +37,7 @@ def _history_key(api_client, user_id):
 
 
 def check_limit(api_client, user_id, *, consume_request=True, now_us=None):
-    """now_us is ONLY for deterministic Python tests, never a request parameter."""
+    """Use now_us for the test clock; API callers cannot set it."""
     if api_client.pk is None:
         raise ValueError("Save the API client before checking its quota.")
     if api_client.max_requests < 1 or api_client.window_seconds < 1:

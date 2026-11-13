@@ -27,7 +27,7 @@ class APIClient(models.Model):
 
     @property
     def is_authenticated(self):
-        # DRF reads this AFTER our authentication class verifies the key.
+        # DRF checks this after API key authentication.
         return True
 
     def save(self, *args, **kwargs):

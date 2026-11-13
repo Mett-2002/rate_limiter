@@ -1,4 +1,4 @@
-"""Demo tests mock only its HTTP boundary; root API tests use real Redis."""
+"""Tests for the demo views and HTTP client."""
 import io
 import json
 from hashlib import sha256
@@ -25,7 +25,6 @@ class DemoTests(SimpleTestCase):
     def test_home_does_not_render_api_key(self):
         response = self.client.get("/")
         self.assertContains(response, 'id="request-form"')
-        self.assertNotContains(response, 'id="message-form"')
         self.assertNotContains(response, "private-demo-test-key")
 
     def test_home_versions_all_assets_and_prevents_stale_html(self):

@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Rate limiter lab</title>
+  <title>Rate limiter demo</title>
   <link rel="stylesheet" href="{% static 'support/demo.css' %}?v={{ asset_version }}">
   <script src="{% static 'support/timeline.js' %}?v={{ asset_version }}" defer></script>
   <script src="{% static 'support/demo.js' %}?v={{ asset_version }}" defer></script>
@@ -13,7 +13,7 @@
   <main class="shell">
     <header class="page-header">
       <div class="brand-icon" aria-hidden="true">RL</div>
-      <div><h1>Rate limiter lab</h1><p>Choose a user, send a request, watch the window.</p></div>
+      <div><h1>Rate limiter demo</h1><p>Choose a user, send a request, watch the window.</p></div>
       <a class="api-link" href="http://127.0.0.1:8200/" target="_blank" rel="noopener">API ↗</a>
     </header>
     <div class="workspace">
@@ -43,7 +43,7 @@
           <span><i class="legend-window" aria-hidden="true"></i>Rolling window</span>
         </div>
         <div class="timeline-plot"><svg id="request-timeline" role="img" aria-labelledby="timeline-svg-title timeline-svg-description" viewBox="0 0 900 270"></svg></div>
-        <p class="timeline-note"><span id="timeline-empty">Send a request to begin. </span>This tab’s responses only; timestamps are approximate. The API capacity counter is authoritative.</p>
+        <p class="timeline-note"><span id="timeline-empty">Send a request to begin. </span>Only requests sent from this page appear here. Times are approximate; the capacity counter comes from the API.</p>
         <p id="timeline-announcement" class="sr-only" role="status"></p>
       </section>
     </div>

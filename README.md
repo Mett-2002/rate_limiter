@@ -1,88 +1,101 @@
 # Rate limiter
 
-A Django REST Framework service that allows each user five accepted requests in any rolling 60-second window. The limit and window are configurable per API client.
+An internal Django REST Framework API for limiting requests per user. The default rule is **5 accepted requests in a rolling 60-second window**. Each API client can have its own limit and window.
 
 ## Algorithm
 
-The **sliding-window log** uses a Redis FIFO list for each API client/user pair. On every consume or status request, one Lua script:
+The **exact sliding-window log** stores accepted timestamps in a Redis FIFO list for each API client/user pair. Every consume or status check runs one Lua script:
 
-1. Reads Redis time.
-2. Removes timestamps at least one window old.
-3. Counts the remaining timestamps.
-4. For a consume request, appends the current timestamp if capacity remains; otherwise rejects it.
+1. Remove timestamps outside the window.
+2. Count the remaining entries.
+3. For a consume request, add a timestamp if capacity is available; otherwise reject it.
 
-The window is `(now - 60 seconds, now]`. A request accepted at `12:00:00` stops counting at exactly `12:01:00`. Each accepted request releases its own slot. Rejections do not start a new timeout.
+The interval is `(now - window, now]`. A request accepted at `12:00:00` stops counting at exactly `12:01:00` under the default rule. Each request frees its own slot. Rejections do not extend the window; status checks clean up expired entries without adding one.
 
-Lua makes the check and append atomic, preventing simultaneous requests from claiming the same last slot. Rejections and status checks neither append nor extend expiry. Redis expires idle lists automatically; individual old timestamps are removed when the script runs. No scheduled cleanup is needed.
+Redis supplies the clock and runs the script atomically, so concurrent calls cannot claim the same last slot. Idle lists expire automatically. Removing `k` old entries costs `O(k + 1)`; each active list stores at most the configured limit.
 
-Removing `k` expired entries costs `O(k + 1)`. Storage is `O(limit)` per active bucket. The implementation is in `rate_limiter_api/limiter/sliding_window.lua`; `services.py` handles Redis connections and results.
+## Design
 
-## System design
+- `rate_limiter_api/` contains the API, client configuration, Swagger UI and engine tests.
+- `demo_website_using_rate_limiter/` is a separate Django caller with Alice/Bob controls and an animated timeline.
+- SQLite stores client settings and key hashes. Redis stores request history.
 
-- **rate_limiter_api:** authenticates callers, validates input and returns quota decisions.
-- **demo_website_using_rate_limiter:** a separate Django website that calls the API over HTTP. It has a request button, user selector and animated timeline. It does not persist requests.
-- **SQLite:** stores API-client settings, key hashes and policy versions.
-- **Redis:** stores accepted timestamps, separated by client, policy version and user ID hash.
+A gateway or microservice calls the limiter with its Bearer key and a verified `user_id`. It proceeds only when the request is allowed. Check each action at one place to avoid counting it twice.
 
-An administrator creates clients and generates keys in Django Admin. Callers send `Authorization: Bearer YOUR_API_KEY`; only the SHA-256 hash is stored. The demo keeps its key in the backend.
+Quotas are separate for each client/user pair. The demo uses the `local-demo` client; a different client key in Swagger has a separate quota. Changing a client's rule starts fresh quota. Rotating its key preserves quota.
 
-The calling backend must supply a trusted user ID and proceed with its business action only after an allowed decision. The limiter does not forward requests. Changing a rule through Admin/model save starts fresh quota; rotating a key preserves quota.
+## First-time setup
 
-## API
+Requires **Python 3.11** and a separate **Redis server**. The Python `redis` package does not install that server.
 
-Consume and status require the Bearer key. Consume accepts only `{"user_id":"alice"}`.
+These commands use Windows CMD, starting in the repository root. Run one command at a time. Setup is only needed once.
 
-| Method | Path | Response |
-|---|---|---|
-| POST | `/api/limits/consume/` | 200 accepted; 429 rejected |
-| GET | `/api/limits/status/?user_id=alice` | 200 snapshot; no slot consumed |
-| GET | `/api/health/` | 200 Redis available; 503 unavailable |
-
-Decisions include `allowed`, `used`, `remaining` and `retry_after`. A rejected consume includes `Retry-After`. Invalid input returns 400; invalid credentials 401. Redis failure returns 503 and the caller must stop the action.
-
-## Run locally
-
-Requires Python 3.11 and a running Redis server. The default Redis address is `redis://127.0.0.1:6379/0`; set `REDIS_URL` for another instance. The Python `redis` package is a client, not the Redis server.
-
-From the repository root, in PowerShell:
-
-```powershell
+```cmd
 cd rate_limiter_api
 py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe manage.py migrate
-.\.venv\Scripts\python.exe manage.py createsuperuser
-.\run.ps1
-```
-
-Swagger UI: http://127.0.0.1:8200/api/docs/ (the root and old playground URLs redirect here). Create clients in Django Admin, click **Authorize**, and paste the key without the `Bearer` prefix. Expand an endpoint, choose **Try it out**, enter the user ID and **Execute**. Swagger displays the actual status, headers and JSON. The OpenAPI schema is at `/api/schema/`. UI assets are bundled locally; no CDN is needed, and authorization is not saved across reloads.
-
-For the demo, use another terminal from the repository root:
-
-```powershell
-.\rate_limiter_api\.venv\Scripts\python.exe rate_limiter_api\scripts\prepare_demo.py
-cd demo_website_using_rate_limiter
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe manage.py migrate
+.venv\Scripts\python.exe manage.py createsuperuser
+.venv\Scripts\python.exe scripts\prepare_demo.py
+cd ..\demo_website_using_rate_limiter
 py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\run.ps1
+.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Open http://127.0.0.1:8300/. The setup helper reuses valid demo credentials or generates a replacement. They are stored in an ignored local file.
+The helper creates the demo client and saves its key in the demo's ignored `.runtime/credentials.json`. The key stays in the demo backend.
 
-For an existing checkout, reinstall `rate_limiter_api/requirements.txt` in its virtual environment and restart the API after updating.
+## Start the servers
+
+Open three CMD terminals in the repository root and leave them running.
+
+**1. Redis** — run from its installation folder if `redis-server` is not on PATH:
+
+```cmd
+redis-server --bind 127.0.0.1 --port 6379 --save "" --appendonly no
+```
+
+**2. API:**
+
+```cmd
+cd rate_limiter_api
+.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8200
+```
+
+**3. Demo:**
+
+```cmd
+cd demo_website_using_rate_limiter
+.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8300
+```
+
+PowerShell users can use `.\run.ps1` inside each project instead. The default Redis URL is `redis://127.0.0.1:6379/0`; set `REDIS_URL` before starting the API to use another address.
+
+## Try the API
+
+Open [Django Admin](http://127.0.0.1:8200/admin/), create an API client and copy its key. Open [Swagger UI](http://127.0.0.1:8200/api/docs/), click **Authorize**, paste the key without `Bearer`, then use **Try it out** and **Execute**.
+
+| Request | Input | Result |
+|---|---|---|
+| POST `/api/limits/consume/` | JSON: `{"user_id":"alice"}` | 200 allowed; 429 full |
+| GET `/api/limits/status/` | Query: `user_id=alice` | 200 quota snapshot; consumes nothing |
+| GET `/api/health/` | None | 200 Redis available; 503 unavailable |
+
+Consume and status require `Authorization: Bearer YOUR_API_KEY`. Invalid input returns 400; invalid credentials 401. Rejections include `Retry-After`. On 503, the calling service must stop the action.
+
+The [demo](http://127.0.0.1:8300/) shows requests sent from that page: green for accepted, red for rejected. Its plotted times are approximate; quota comes from the API.
 
 ## Tests
 
-From the API folder, with Redis running:
+With Redis running, from `rate_limiter_api/`:
 
-```powershell
-.\.venv\Scripts\python.exe manage.py test limiter --verbosity 2
+```cmd
+.venv\Scripts\python.exe manage.py test limiter
 ```
 
-`limiter/test_engine.py` covers request limits, time boundaries, expiry, user/client isolation and concurrent calls against real Redis. Test keys use random prefixes and are cleaned up individually. HTTP responses and authentication can be checked manually in Swagger UI; this project has no separate HTTP test suite.
+`limiter/test_engine.py` covers limits, exact boundaries, individual expiry, client/user isolation and concurrency using real Redis. Set `TEST_REDIS_URL` to change its default Redis database, `redis://127.0.0.1:6379/15`. Cleanup deletes only each test's keys.
 
-From the demo folder, run `.\.venv\Scripts\python.exe manage.py test support`. These tests mock the HTTP connection to the API.
+From the demo folder, `.venv\Scripts\python.exe manage.py test support` tests the views and HTTP client with mocked API calls. There is no automated HTTP suite for the limiter API.
 
 ## Scope
 
-One policy per API client. Redis restart behavior depends on its persistence settings. An accepted POST consumes quota even if the later business action fails. There is no idempotency or automatic POST retry. This configuration is for local development.
+This is a local development setup. The Redis command above disables persistence, so restarting it clears quotas. An accepted call consumes a slot even if the caller's later action fails. POST requests are not automatically retried.

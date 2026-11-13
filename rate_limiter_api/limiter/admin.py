@@ -1,4 +1,4 @@
-"""Provision API clients and issue keys without a Python shell."""
+"""API client settings and key management."""
 from django.contrib import admin
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
@@ -28,7 +28,7 @@ class APIClientAdmin(admin.ModelAdmin):
     def key_response(self, request, obj, token=None):
         response = TemplateResponse(request, "admin/limiter/api_client_key.html", {
             **self.admin_site.each_context(request),
-            "title": "API client API key", "api_client": obj, "token": token,
+            "title": "API key", "api_client": obj, "token": token,
             "change_url": reverse("admin:limiter_apiclient_change", args=[obj.pk]),
         })
         response["Cache-Control"] = "no-store"

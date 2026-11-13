@@ -5,7 +5,6 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
     path("", RedirectView.as_view(pattern_name="api-docs"), name="api-index"),
-    path("playground/", RedirectView.as_view(pattern_name="api-docs"), name="playground"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema", template_name="limiter/swagger.html"), name="api-docs"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("admin/", admin.site.urls),

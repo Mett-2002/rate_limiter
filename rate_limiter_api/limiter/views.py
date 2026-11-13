@@ -1,4 +1,4 @@
-"""HTTP contract; the atomic algorithm lives in services.py and Lua."""
+"""Rate-limit API views."""
 from django.conf import settings
 from redis.exceptions import RedisError
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
@@ -58,7 +58,6 @@ class AuthenticatedClientView(APIView):
 
 
 class ConsumeView(AuthenticatedClientView):
-    """POST one new attempt. Each accepted call consumes one slot."""
     @extend_schema(
         summary="Consume one request", tags=["Limits"],
         description="Each accepted call consumes one slot. Rejected calls consume none. Only user_id is accepted.",
@@ -75,7 +74,6 @@ class ConsumeView(AuthenticatedClientView):
 
 
 class StatusView(AuthenticatedClientView):
-    """GET prunes expired history without consuming a slot."""
     @extend_schema(
         summary="Check status", tags=["Limits"],
         description="Removes expired history without consuming capacity. Returns 200 even when allowed is false.",

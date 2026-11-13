@@ -1,4 +1,4 @@
-"""OpenAPI documentation for the existing authentication and HTTP responses."""
+"""OpenAPI authentication and response definitions."""
 from drf_spectacular.extensions import OpenApiAuthenticationExtension, OpenApiSerializerExtension
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse
@@ -44,6 +44,7 @@ USER_ID = {
     "pattern": r"\S", "example": "alice",
     "description": "End-user identifier supplied by the calling service; whitespace is trimmed.",
 }
+
 
 class UserRequestSchema(OpenApiSerializerExtension):
     """Document the serializer's strict rejection of unknown fields."""

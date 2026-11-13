@@ -1,4 +1,4 @@
-"""Run the independent demo website, not the rate-limiter API."""
+"""Management entry point for the demo website."""
 import os
 import sys
 

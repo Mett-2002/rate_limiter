@@ -1,4 +1,4 @@
-"""A small HTTP client; this file never imports the limiter's Python code."""
+"""HTTP client for the rate-limiter API."""
 import json
 from urllib.error import HTTPError
 from urllib.parse import urlencode
