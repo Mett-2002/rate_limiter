@@ -1,10 +1,13 @@
 from django.contrib import admin
 from django.urls import include, path
-from limiter.views import IndexView, PlaygroundView
+from django.views.generic import RedirectView
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
-    path("", IndexView.as_view(), name="api-index"),
-    path("playground/", PlaygroundView.as_view(), name="playground"),
+    path("", RedirectView.as_view(pattern_name="api-docs"), name="api-index"),
+    path("playground/", RedirectView.as_view(pattern_name="api-docs"), name="playground"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema", template_name="limiter/swagger.html"), name="api-docs"),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("admin/", admin.site.urls),
     path("api/", include("limiter.urls")),
 ]

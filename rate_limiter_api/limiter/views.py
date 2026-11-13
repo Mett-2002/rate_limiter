@@ -1,78 +1,27 @@
 """HTTP contract; the atomic algorithm lives in services.py and Lua."""
 from django.conf import settings
-from django.urls import reverse
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import never_cache
-from django.views.generic import TemplateView
 from redis.exceptions import RedisError
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .authentication import APIClientAuthentication
 from .serializers import UserRequestSerializer
 from .services import check_limit, redis_backend
-
-
-class IndexView(APIView):
-    authentication_classes = []
-    permission_classes = [AllowAny]
-    renderer_classes = [JSONRenderer, TemplateHTMLRenderer]
-
-    def get(self, request):
-        return Response({
-            "name": "Internal rate limiter",
-            "algorithm": "Exact sliding-window log (Redis FIFO + atomic Lua)",
-            "semantics": "(now - window, now]; exact-boundary timestamps expire",
-            "authentication": "Authorization: Bearer YOUR_API_CLIENT_KEY",
-            "body_example": {"user_id": "alice"},
-            "consume": reverse("consume"),
-            "status": reverse("limit-status") + "?user_id=alice",
-            "health": reverse("health"),
-            "admin": reverse("admin:index"),
-            "test_api": reverse("playground"),
-            "help": (
-                "Use Test the API in your browser. Consuming a slot requires "
-                "POST with a JSON user_id and an Authorization: Bearer "
-                "YOUR_API_CLIENT_KEY header. Checking status uses GET and "
-                "the same Bearer key without consuming a slot."
-            ),
-            "endpoints": [
-                {"method": "POST", "path": reverse("consume"),
-                 "authentication": "Bearer API client key",
-                 "description": "Try one action; an accepted request consumes one slot."},
-                {"method": "GET", "path": reverse("limit-status"),
-                 "authentication": "Bearer API client key",
-                 "description": "Check a user_id quota without consuming a slot."},
-                {"method": "GET", "path": reverse("health"),
-                 "authentication": "None (public)",
-                 "description": "Check whether the Redis backend is available."},
-                {"method": "GET", "path": reverse("playground"),
-                 "authentication": "None (public page; API calls require a Bearer key)",
-                 "description": "Test authenticated consume and status requests in your browser."},
-                {"method": "GET", "path": reverse("admin:index"),
-                 "authentication": "Django admin login",
-                 "description": "Manage API clients, quota policies, and API keys."},
-            ],
-        }, template_name="limiter/index.html")
-
-
-@method_decorator(never_cache, name="dispatch")
-class PlaygroundView(TemplateView):
-    """Public browser client; requests still authenticate with their Bearer key."""
-    template_name = "limiter/playground.html"
-    http_method_names = ["get", "head", "options"]
-
-    def dispatch(self, request, *args, **kwargs):
-        response = super().dispatch(request, *args, **kwargs)
-        response["Referrer-Policy"] = "same-origin"
-        return response
+from .schema import (
+    ERROR_RESPONSES, QUOTA_HEADERS, RETRY_HEADER, USER_ID,
+    HealthResponseSerializer, LimitResponseSerializer,
+)
 
 
 class HealthView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Check Redis health", tags=["Health"], auth=[],
+        responses={200: HealthResponseSerializer, 503: HealthResponseSerializer},
+    )
     def get(self, request):
         try:
             client, _ = redis_backend(settings.REDIS_URL)
@@ -110,11 +59,29 @@ class AuthenticatedClientView(APIView):
 
 class ConsumeView(AuthenticatedClientView):
     """POST one new attempt. Each accepted call consumes one slot."""
+    @extend_schema(
+        summary="Consume one request", tags=["Limits"],
+        description="Each accepted call consumes one slot. Rejected calls consume none. Only user_id is accepted.",
+        request={"application/json": UserRequestSerializer},
+        parameters=[*QUOTA_HEADERS, RETRY_HEADER],
+        responses={
+            200: OpenApiResponse(LimitResponseSerializer, description="Request accepted; one slot consumed."),
+            429: OpenApiResponse(LimitResponseSerializer, description="Quota full; no slot consumed."),
+            **ERROR_RESPONSES,
+        },
+    )
     def post(self, request):
         return self.limit_response(request, request.data, consume_request=True)
 
 
 class StatusView(AuthenticatedClientView):
     """GET prunes expired history without consuming a slot."""
+    @extend_schema(
+        summary="Check status", tags=["Limits"],
+        description="Removes expired history without consuming capacity. Returns 200 even when allowed is false.",
+        request=None,
+        parameters=[OpenApiParameter("user_id", USER_ID, required=True), *QUOTA_HEADERS],
+        responses={200: LimitResponseSerializer, **ERROR_RESPONSES},
+    )
     def get(self, request):
         return self.limit_response(request, request.query_params, consume_request=False)

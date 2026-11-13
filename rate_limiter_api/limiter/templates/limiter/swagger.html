@@ -1,0 +1,9 @@
+{% extends "drf_spectacular/swagger_ui.html" %}
+{% block head %}
+{{ block.super }}
+<style>
+  @media (max-width: 600px) {
+    .swagger-ui .responses-wrapper { overflow-x: auto; }
+  }
+</style>
+{% endblock %}

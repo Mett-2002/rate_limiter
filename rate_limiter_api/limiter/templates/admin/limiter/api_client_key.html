@@ -9,7 +9,7 @@
 <button type="button" id="copy-key">Copy API key</button>
 <p id="copy-result" role="status"></p>
 <p>Send it as <code>Authorization: Bearer YOUR_KEY</code>.</p>
-<p>Copy the key, then paste it into <a href="{% url 'playground' %}">Test the API</a>.</p>
+<p>Copy the key, then paste it into <a href="{% url 'api-docs' %}">Swagger UI</a>.</p>
 <p><a href="{{ change_url }}">Return to API client configuration</a></p>
 <script>
 document.getElementById('copy-key').addEventListener('click', async () => {

@@ -55,7 +55,7 @@ py -3.11 -m venv .venv
 .\run.ps1
 ```
 
-API overview: http://127.0.0.1:8200/. Create clients at http://127.0.0.1:8200/admin/. Open http://127.0.0.1:8200/playground/ to paste a key and send Consume or Check status requests. The tester shows the HTTP status, headers and JSON, with the key hidden from previews. Opening the Consume URL in the address bar does not send an authenticated POST.
+Swagger UI: http://127.0.0.1:8200/api/docs/ (the root and old playground URLs redirect here). Create clients in Django Admin, click **Authorize**, and paste the key without the `Bearer` prefix. Expand an endpoint, choose **Try it out**, enter the user ID and **Execute**. Swagger displays the actual status, headers and JSON. The OpenAPI schema is at `/api/schema/`. UI assets are bundled locally; no CDN is needed, and authorization is not saved across reloads.
 
 For the demo, use another terminal from the repository root:
 
@@ -68,6 +68,8 @@ py -3.11 -m venv .venv
 ```
 
 Open http://127.0.0.1:8300/. The setup helper reuses valid demo credentials or generates a replacement. They are stored in an ignored local file.
+
+For an existing checkout, reinstall `rate_limiter_api/requirements.txt` in its virtual environment and restart the API after updating.
 
 ## Tests
 
