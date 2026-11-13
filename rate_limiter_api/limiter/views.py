@@ -60,7 +60,13 @@ class AuthenticatedClientView(APIView):
 class ConsumeView(AuthenticatedClientView):
     @extend_schema(
         summary="Consume one request", tags=["Limits"],
-        description="Each accepted call consumes one slot. Rejected calls consume none. Only user_id is accepted.",
+        description=(
+            "Atomically checks quota and records one accepted request. Send only `user_id` in the JSON body.\n\n"
+            "- **200:** this attempt was accepted, including the last available slot (`remaining: 0`).\n"
+            "- **429:** the window was already full; this attempt consumes no slot and does not extend expiry.\n\n"
+            "Every POST is a new attempt; accepted requests are not deduplicated. "
+            "The caller should perform its action only after an allowed response."
+        ),
         request={"application/json": UserRequestSerializer},
         parameters=[*QUOTA_HEADERS, RETRY_HEADER, AUTH_HEADER],
         responses=CONSUME_RESPONSES,
@@ -72,7 +78,12 @@ class ConsumeView(AuthenticatedClientView):
 class StatusView(AuthenticatedClientView):
     @extend_schema(
         summary="Check status", tags=["Limits"],
-        description="Removes expired history without consuming capacity. Returns 200 even when allowed is false.",
+        description=(
+            "Reads the current quota and removes expired history without consuming or reserving a slot.\n\n"
+            "**200** means the status lookup succeeded. `allowed: false` means a consume would currently be rejected. "
+            "The examples cover empty, partially used and full windows.\n\n"
+            "Use **Consume** before performing an action; a status check does not guarantee that capacity will still be available."
+        ),
         request=None,
         parameters=[
             OpenApiParameter("user_id", USER_ID, required=True, description=USER_ID["description"]),

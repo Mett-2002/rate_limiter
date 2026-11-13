@@ -68,15 +68,16 @@ REST_FRAMEWORK = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "Rate limiter API",
     "DESCRIPTION": (
-        "Create an API client and copy its key in [Django Admin](/admin/limiter/apiclient/). "
-        "Click **Authorize** and paste the key without the `Bearer` prefix. "
-        "Expand an endpoint, click **Try it out**, enter a user ID, then **Execute**.\n\n"
-        "**Consume** uses one slot when accepted. **Check status** consumes none. "
-        "The default rule is 5 accepted requests per user in a rolling 60 seconds; "
-        "each API client can have a different rule. The window is `(now - window, now]`. "
-        "Requests exactly one window old expire.\n\n"
-        "Response examples use the default rule and illustrative timestamps. "
-        "Click **Execute** to see the actual response for your client."
+        "Internal quota service for backend callers. Each **API client/user pair** has an independent quota. "
+        "The calling service supplies its verified user identifier; this API authenticates the calling service.\n\n"
+        "**Try it:** create an API client and copy its key in [Django Admin](/admin/limiter/apiclient/). "
+        "Click **Authorize**, paste the key without the `Bearer` prefix, then expand an endpoint and use **Try it out** and **Execute**.\n\n"
+        "**Rolling window:** the default rule allows 5 accepted requests in the last 60 seconds; "
+        "each API client can have its own rule. The interval is `(now - window, now]`. "
+        "Under the default rule, a request accepted at `12:00:00` stops counting at exactly `12:01:00`. "
+        "Rejected requests and status checks do not consume slots or restart the window.\n\n"
+        "**Examples** use the default rule and illustrative timestamps. "
+        "Select an example to see different outcomes; **Execute** returns live values for your client."
     ),
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,

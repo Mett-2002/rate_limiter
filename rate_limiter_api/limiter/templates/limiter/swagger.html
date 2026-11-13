@@ -4,6 +4,14 @@
 <style>
   @media (max-width: 600px) {
     .swagger-ui .responses-wrapper { overflow-x: auto; }
+    .swagger-ui .responses-table .response-col_status { min-width: 0; width: 32px; padding-right: 8px; }
+    .swagger-ui .responses-table .response-col_links { display: none; }
+    .swagger-ui .responses-table .response-col_description { width: auto; }
+    .swagger-ui .response-controls { flex-direction: column; align-items: stretch; gap: 12px; }
+    .swagger-ui .response-controls > div { width: 100%; margin-right: 0; }
+    .swagger-ui .response-controls select,
+    .swagger-ui .examples-select { width: 100%; max-width: 100%; }
+    .swagger-ui .headers-wrapper { overflow-x: auto; }
   }
 </style>
 {% endblock %}

@@ -17,20 +17,20 @@ class APIClientKeyScheme(OpenApiAuthenticationExtension):
 
 
 class LimitResponseSerializer(serializers.Serializer):
-    api_client = serializers.CharField()
-    user_id = serializers.CharField()
+    api_client = serializers.CharField(help_text="Name of the authenticated API client.")
+    user_id = serializers.CharField(help_text="User identifier after trimming leading and trailing whitespace.")
     allowed = serializers.BooleanField(
         help_text="For consume: this request was accepted. For status: capacity is available.",
     )
-    limit = serializers.IntegerField(min_value=1)
-    window_seconds = serializers.IntegerField(min_value=1)
-    used = serializers.IntegerField(min_value=0)
-    remaining = serializers.IntegerField(min_value=0)
+    limit = serializers.IntegerField(min_value=1, help_text="Maximum accepted requests per rolling window.")
+    window_seconds = serializers.IntegerField(min_value=1, help_text="Length of the rolling window in seconds.")
+    used = serializers.IntegerField(min_value=0, help_text="Accepted requests still inside the window after this operation.")
+    remaining = serializers.IntegerField(min_value=0, help_text="Available slots after this operation: max(0, limit - used).")
     retry_after = serializers.IntegerField(
-        min_value=0, help_text="Zero when allowed; otherwise seconds to wait, rounded up.",
+        min_value=0, help_text="Seconds to wait after a denied decision, rounded up. Zero when allowed is true.",
     )
     next_available_at = serializers.FloatField(
-        allow_null=True, help_text="Unix time in seconds when capacity next becomes available; null when not full.",
+        allow_null=True, help_text="Earliest time a full quota can regain a slot, in Unix seconds. Null when slots remain; also set after an accepted last-slot request.",
     )
 
 
@@ -45,7 +45,7 @@ class HealthResponseSerializer(serializers.Serializer):
 USER_ID = {
     "type": "string", "minLength": 1, "maxLength": 128,
     "pattern": r"\S", "example": "alice",
-    "description": "End-user identifier supplied by the calling service; whitespace is trimmed.",
+    "description": "User identifier supplied by the trusted calling service. Case-sensitive; leading and trailing whitespace is trimmed. Use 1 to 128 characters after trimming.",
 }
 
 
@@ -110,10 +110,19 @@ FULL_QUOTA = {
     "retry_after": 30, "next_available_at": 1800000060.0,
 }
 
+EMPTY_QUOTA = {**AVAILABLE_QUOTA, "used": 0, "remaining": 5}
+LAST_ACCEPTED_REQUEST = {**FULL_QUOTA, "allowed": True, "retry_after": 0}
+
 CONSUME_RESPONSES = {
     200: OpenApiResponse(
-        LimitResponseSerializer, description="Request accepted; one slot consumed.",
-        examples=[OpenApiExample("First accepted request", value=AVAILABLE_QUOTA, response_only=True)],
+        LimitResponseSerializer, description="Request accepted; one slot consumed. This includes the request that fills the window.",
+        examples=[
+            OpenApiExample("First accepted request", value=AVAILABLE_QUOTA, response_only=True),
+            OpenApiExample(
+                "Last slot accepted", value=LAST_ACCEPTED_REQUEST, response_only=True,
+                description="The fifth request succeeds and fills the default window. A subsequent consume is rejected until capacity opens.",
+            ),
+        ],
     ),
     429: OpenApiResponse(
         LimitResponseSerializer, description="Quota full; no slot consumed.",
@@ -125,8 +134,12 @@ STATUS_RESPONSES = {
     200: OpenApiResponse(
         LimitResponseSerializer, description="Current quota; no slot consumed. A full quota also returns HTTP 200.",
         examples=[
-            OpenApiExample("Capacity available", value=AVAILABLE_QUOTA, response_only=True),
-            OpenApiExample("Quota full", value=FULL_QUOTA, response_only=True),
+            OpenApiExample(
+                "Empty window", value=EMPTY_QUOTA, response_only=True,
+                description="No accepted requests remain in the window. This also applies after all previous requests have expired.",
+            ),
+            OpenApiExample("Partially used window", value=AVAILABLE_QUOTA, response_only=True),
+            OpenApiExample("Full window", value=FULL_QUOTA, response_only=True),
         ],
     ),
     **ERROR_RESPONSES,
