@@ -55,7 +55,7 @@ py -3.11 -m venv .venv
 .\run.ps1
 ```
 
-API: http://127.0.0.1:8200/. Create clients at http://127.0.0.1:8200/admin/.
+API overview: http://127.0.0.1:8200/. Create clients at http://127.0.0.1:8200/admin/. Open http://127.0.0.1:8200/playground/ to paste a key and send Consume or Check status requests. The tester shows the HTTP status, headers and JSON, with the key hidden from previews. Opening the Consume URL in the address bar does not send an authenticated POST.
 
 For the demo, use another terminal from the repository root:
 

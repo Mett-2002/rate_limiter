@@ -1,8 +1,12 @@
 """HTTP contract; the atomic algorithm lives in services.py and Lua."""
 from django.conf import settings
 from django.urls import reverse
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
+from django.views.generic import TemplateView
 from redis.exceptions import RedisError
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .authentication import APIClientAuthentication
@@ -13,6 +17,7 @@ from .services import check_limit, redis_backend
 class IndexView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    renderer_classes = [JSONRenderer, TemplateHTMLRenderer]
 
     def get(self, request):
         return Response({
@@ -25,10 +30,49 @@ class IndexView(APIView):
             "status": reverse("limit-status") + "?user_id=alice",
             "health": reverse("health"),
             "admin": reverse("admin:index"),
-        })
+            "test_api": reverse("playground"),
+            "help": (
+                "Use Test the API in your browser. Consuming a slot requires "
+                "POST with a JSON user_id and an Authorization: Bearer "
+                "YOUR_API_CLIENT_KEY header. Checking status uses GET and "
+                "the same Bearer key without consuming a slot."
+            ),
+            "endpoints": [
+                {"method": "POST", "path": reverse("consume"),
+                 "authentication": "Bearer API client key",
+                 "description": "Try one action; an accepted request consumes one slot."},
+                {"method": "GET", "path": reverse("limit-status"),
+                 "authentication": "Bearer API client key",
+                 "description": "Check a user_id quota without consuming a slot."},
+                {"method": "GET", "path": reverse("health"),
+                 "authentication": "None (public)",
+                 "description": "Check whether the Redis backend is available."},
+                {"method": "GET", "path": reverse("playground"),
+                 "authentication": "None (public page; API calls require a Bearer key)",
+                 "description": "Test authenticated consume and status requests in your browser."},
+                {"method": "GET", "path": reverse("admin:index"),
+                 "authentication": "Django admin login",
+                 "description": "Manage API clients, quota policies, and API keys."},
+            ],
+        }, template_name="limiter/index.html")
 
 
-class HealthView(IndexView):
+@method_decorator(never_cache, name="dispatch")
+class PlaygroundView(TemplateView):
+    """Public browser client; requests still authenticate with their Bearer key."""
+    template_name = "limiter/playground.html"
+    http_method_names = ["get", "head", "options"]
+
+    def dispatch(self, request, *args, **kwargs):
+        response = super().dispatch(request, *args, **kwargs)
+        response["Referrer-Policy"] = "same-origin"
+        return response
+
+
+class HealthView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
     def get(self, request):
         try:
             client, _ = redis_backend(settings.REDIS_URL)

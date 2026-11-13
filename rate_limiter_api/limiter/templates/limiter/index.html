@@ -1,0 +1,51 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rate limiter API</title>
+  <link rel="stylesheet" href="{% static 'limiter/api.css' %}">
+</head>
+<body>
+<main>
+  <header class="page-header">
+    <div><p class="eyebrow">Local API</p><h1>Rate limiter</h1><p class="muted">Check a user's quota before performing an action.</p></div>
+    <a class="button" href="{{ test_api }}">Test the API</a>
+  </header>
+
+  <section class="card">
+    <h2>Start here</h2>
+    <ol class="steps">
+      <li><strong>Get an API key.</strong> Create an API client in <a href="{{ admin }}">Django Admin</a> and copy its key.</li>
+      <li><strong>Open the <a href="{{ test_api }}">browser tester</a>.</strong> Paste the key and enter a user ID, such as <code>alice</code>.</li>
+      <li><strong>Send a Consume request.</strong> Each accepted request uses one slot. Check status reads the quota without consuming a slot.</li>
+    </ol>
+    <p class="note">Default rule: 5 accepted requests per user in the last 60 seconds. Each API client can have its own rule.</p>
+  </section>
+
+  <section class="card">
+    <h2>Endpoints</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Method and path</th><th>Authentication</th><th>Purpose</th></tr></thead>
+      <tbody>{% for endpoint in endpoints %}<tr>
+        <td><span class="method">{{ endpoint.method }}</span> <code>{{ endpoint.path }}</code></td>
+        <td data-label="Authentication">{{ endpoint.authentication }}</td><td data-label="Purpose">{{ endpoint.description }}</td>
+      </tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+
+  <section class="card">
+    <h2>Why does opening Consume show 401?</h2>
+    <p>The address bar sends a GET without your API key. Consume requires a POST with this header and a JSON body:</p>
+    <pre>Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+
+{"user_id": "alice"}</pre>
+    <p>Use the <a href="{{ test_api }}">tester</a>, CMD or Postman to send that request. An Admin login does not replace the API key.</p>
+    <p class="muted">The rolling window is <code>(now - window, now]</code>. A request exactly 60 seconds old stops counting under the default rule. Rejected requests do not extend the window.</p>
+  </section>
+  <footer><a href="{{ test_api }}">Test the API</a><a href="{{ health }}">Redis health</a><a href="?format=json">View this overview as JSON</a></footer>
+</main>
+</body>
+</html>

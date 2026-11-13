@@ -2,19 +2,102 @@
 import hashlib
 import os
 import uuid
+from html.parser import HTMLParser
 from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.test import Client, TestCase, override_settings
+from django.test import Client, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from redis.exceptions import ConnectionError
 from rest_framework.test import APIClient as DRFTestClient
 
 from .models import APIClient
 from .services import redis_backend
+
+
+class _ControlParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.controls = {}
+
+    def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
+        if tag in {"input", "button"} and "id" in attributes:
+            self.controls[attributes["id"]] = (tag, attributes)
+
+
+class PublicApiPagesTests(SimpleTestCase):
+    def test_index_defaults_to_json_and_preserves_existing_fields(self):
+        response = self.client.get(reverse("api-index"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/json")
+        data = response.json()
+        self.assertEqual(data["name"], "Internal rate limiter")
+        self.assertEqual(data["algorithm"], "Exact sliding-window log (Redis FIFO + atomic Lua)")
+        self.assertEqual(data["semantics"], "(now - window, now]; exact-boundary timestamps expire")
+        self.assertEqual(data["authentication"], "Authorization: Bearer YOUR_API_CLIENT_KEY")
+        self.assertEqual(data["body_example"], {"user_id": "alice"})
+        self.assertEqual(data["consume"], reverse("consume"))
+        self.assertEqual(data["status"], reverse("limit-status") + "?user_id=alice")
+        self.assertEqual(data["health"], reverse("health"))
+        self.assertEqual(data["admin"], reverse("admin:index"))
+        self.assertEqual(data["test_api"], reverse("playground"))
+        self.assertIn("POST", data["help"])
+        self.assertIn("Bearer", data["help"])
+        endpoints = {(endpoint["method"], endpoint["path"]): endpoint
+                     for endpoint in data["endpoints"]}
+        self.assertIn(("POST", reverse("consume")), endpoints)
+        self.assertIn(("GET", reverse("limit-status")), endpoints)
+        self.assertIn(("GET", reverse("health")), endpoints)
+        for endpoint in data["endpoints"]:
+            self.assertEqual(set(endpoint), {"method", "path", "authentication", "description"})
+            self.assertTrue(endpoint["description"])
+            self.assertTrue(endpoint["authentication"])
+        self.assertIn("Bearer", endpoints[("POST", reverse("consume"))]["authentication"])
+        self.assertIn("Bearer", endpoints[("GET", reverse("limit-status"))]["authentication"])
+
+    def test_browser_index_renders_guidance_and_test_link(self):
+        response = self.client.get(reverse("api-index"), HTTP_ACCEPT="text/html")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/html", response["Content-Type"])
+        self.assertTemplateUsed(response, "limiter/index.html")
+        for text in ("Test the API", "POST", "Bearer", reverse("playground")):
+            self.assertContains(response, text)
+
+    def test_playground_is_public_and_protects_api_key_entry(self):
+        response = self.client.get(reverse("playground"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "limiter/playground.html")
+        parser = _ControlParser()
+        parser.feed(response.content.decode())
+        key_tag, key_attributes = parser.controls["api-key"]
+        self.assertEqual(key_tag, "input")
+        self.assertEqual(key_attributes["type"], "password")
+        for control_id in ("consume-button", "status-button"):
+            self.assertEqual(parser.controls[control_id][0], "button")
+        self.assertIn("no-store", response["Cache-Control"])
+        self.assertEqual(response["Referrer-Policy"], "same-origin")
+
+    def test_playground_does_not_accept_posts(self):
+        response = self.client.post(reverse("playground"), {"api_key": "not-a-real-key"})
+        self.assertEqual(response.status_code, 405)
+        self.assertIn("no-store", response["Cache-Control"])
+
+    @patch("limiter.views.redis_backend")
+    def test_health_stays_public_for_json_clients_and_browsers(self, backend):
+        redis_client = backend.return_value
+        backend.return_value = (redis_client, None)
+        for accept in ("application/json", "text/html"):
+            with self.subTest(accept=accept):
+                response = self.client.get(reverse("health"), HTTP_ACCEPT=accept)
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateNotUsed(response, "limiter/index.html")
+                if accept == "application/json":
+                    self.assertEqual(response.json(), {"redis": "ok"})
+        self.assertEqual(redis_client.ping.call_count, 2)
 
 
 class APIClientModelTests(TestCase):

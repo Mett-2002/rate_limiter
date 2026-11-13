@@ -1,0 +1,46 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="same-origin">
+  <title>Test the rate limiter API</title>
+  <link rel="stylesheet" href="{% static 'limiter/api.css' %}">
+  <script src="{% static 'limiter/playground.js' %}" defer></script>
+</head>
+<body>
+<main id="tester" data-consume-url="{% url 'consume' %}" data-status-url="{% url 'limit-status' %}">
+  <header class="page-header">
+    <div><p class="eyebrow">Manual API test</p><h1>Test the API</h1><p class="muted">Send real requests and inspect exactly what the API returns.</p></div>
+    <a href="{% url 'api-index' %}">API overview</a>
+  </header>
+  <section class="card">
+    <form id="request-form">
+      <div class="fields">
+        <div><label for="api-key">API key</label><input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your API client's key" required aria-describedby="key-help"><p id="key-help" class="hint">Get a key from <a href="{% url 'admin:limiter_apiclient_changelist' %}">Django Admin</a>. This page does not save it in browser storage.</p></div>
+        <div><label for="user-id">User ID</label><input id="user-id" type="text" value="alice" maxlength="128" autocomplete="off" required aria-describedby="user-help"><p id="user-help" class="hint">Switch to another user to test an independent quota.</p></div>
+      </div>
+      <div class="actions">
+        <button id="consume-button" type="submit" disabled>Consume · POST</button>
+        <button id="status-button" class="secondary" type="button" disabled>Check status · GET</button>
+        <button id="batch-button" class="secondary" type="button" disabled>Send 6 consumes</button>
+      </div>
+    </form>
+    <p class="note">An accepted Consume uses one slot. Check status uses none. With a fresh default quota, six Consume calls produce five 200 responses and one 429.</p>
+    <p id="notice" role="status">Loading request controls…</p>
+    <noscript>JavaScript is needed to send requests from this page. You can also use CMD or Postman.</noscript>
+  </section>
+
+  <div class="panels">
+    <section class="card"><h2>Request</h2><p id="request-caption" class="hint">No request sent. The key will be hidden in this preview.</p><pre id="request-output">Choose Consume or Check status above.</pre></section>
+    <section class="card"><h2>Response <span id="http-status" class="badge">Not sent</span></h2><p id="response-caption" class="hint">The status, headers and body will appear here.</p><pre id="response-output">No response yet.</pre></section>
+  </div>
+  <section class="card">
+    <h2>Recent responses</h2><p class="hint">Select a response to inspect its request and output. Up to 20 are kept in this page's memory.</p>
+    <div id="history" class="history"><span class="muted" id="empty-history">No requests yet.</span></div>
+  </section>
+  <footer><span>200: accepted or status read</span><span>429: quota full</span><span>401: missing or invalid key</span><span>503: Redis unavailable</span></footer>
+</main>
+</body>
+</html>
