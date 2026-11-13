@@ -1,0 +1,8 @@
+"""Run the independent demo website, not the rate-limiter API."""
+import os
+import sys
+
+if __name__ == "__main__":
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "demo_config.settings")
+    from django.core.management import execute_from_command_line
+    execute_from_command_line(sys.argv)

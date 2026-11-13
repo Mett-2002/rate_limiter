@@ -1,0 +1,53 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rate limiter lab</title>
+  <link rel="stylesheet" href="{% static 'support/demo.css' %}?v={{ asset_version }}">
+  <script src="{% static 'support/timeline.js' %}?v={{ asset_version }}" defer></script>
+  <script src="{% static 'support/demo.js' %}?v={{ asset_version }}" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="page-header">
+      <div class="brand-icon" aria-hidden="true">RL</div>
+      <div><h1>Rate limiter lab</h1><p>Choose a user, send a request, watch the window.</p></div>
+      <a class="api-link" href="http://127.0.0.1:8200/" target="_blank" rel="noopener">API ↗</a>
+    </header>
+    <div class="workspace">
+      <form id="request-form" class="card controls" aria-label="Request controls">
+        {% csrf_token %}
+        <div class="user-settings">
+          <div class="control-heading"><label for="identity">User</label><span id="connection" class="badge">Checking…</span></div>
+          <select id="identity"><option value="alice">Alice</option><option value="bob">Bob</option></select>
+        </div>
+        <div class="quota-summary">
+          <p class="remaining"><strong id="remaining">—</strong><span> / <span id="limit">5</span> available</span></p>
+          <p id="window-info" class="muted">Checking capacity…</p>
+        </div>
+        <div id="slots" class="slots" aria-label="Request capacity"></div>
+        <button id="send" type="submit" class="primary">Send request →</button>
+        <p id="feedback" class="feedback" role="status" aria-live="polite">Ready to send.</p>
+        <p id="next-slot" class="next-slot">Each accepted request expires after 60 seconds.</p>
+      </form>
+      <section class="card timeline-card" aria-labelledby="timeline-heading">
+        <div class="timeline-header">
+          <div><h2 id="timeline-heading">Live request timeline</h2><p>User: <strong id="timeline-user">alice</strong> · <span id="policy">5 requests / 60 seconds</span></p></div>
+          <span class="timeline-live">Live</span>
+        </div>
+        <div class="timeline-legend" aria-label="Timeline legend">
+          <span><i class="legend-accepted" aria-hidden="true"></i>Accepted <strong id="timeline-accepted-count">0</strong></span>
+          <span><i class="legend-rejected" aria-hidden="true">×</i>Rejected <strong id="timeline-rejected-count">0</strong></span>
+          <span><i class="legend-window" aria-hidden="true"></i>Rolling window</span>
+        </div>
+        <div class="timeline-plot"><svg id="request-timeline" role="img" aria-labelledby="timeline-svg-title timeline-svg-description" viewBox="0 0 900 270"></svg></div>
+        <p class="timeline-note"><span id="timeline-empty">Send a request to begin. </span>This tab’s responses only; timestamps are approximate. The API capacity counter is authoritative.</p>
+        <p id="timeline-announcement" class="sr-only" role="status"></p>
+      </section>
+    </div>
+    <footer>Accepted requests expire individually. Rejected attempts and status checks do not occupy quota or restart the window.</footer>
+  </main>
+</body>
+</html>

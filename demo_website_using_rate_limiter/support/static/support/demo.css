@@ -1,0 +1,49 @@
+:root{color-scheme:light;--ink:#163044;--muted:#617788;--blue:#2563eb;--teal:#087f70;--border:#dce6ec;--bg:#f3f7fa}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",Arial,sans-serif}
+.shell{height:100vh;height:100dvh;max-width:1440px;margin:auto;padding:24px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:18px}
+.page-header{display:flex;align-items:center;gap:14px}
+.brand-icon{display:grid;place-items:center;width:44px;height:44px;background:var(--teal);color:white;font-size:17px;font-weight:700;border-radius:13px;flex-shrink:0}
+h1{font-size:25px;line-height:1.15;margin:0}h2{font-size:19px;margin:0}
+.page-header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.api-link{margin-left:auto;color:#2258b0;font-size:14px;text-decoration:none;white-space:nowrap}
+.workspace{display:grid;grid-template-columns:280px minmax(0,1fr);gap:20px;min-height:0;align-items:stretch}
+.card{background:white;border:1px solid var(--border);border-radius:16px;box-shadow:0 8px 25px #173d5509}
+.controls{padding:22px;display:flex;flex-direction:column;gap:16px;align-self:start}
+.control-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+label{font-size:13px;font-weight:600}
+select{width:100%;padding:10px 12px;font:inherit;color:var(--ink);background:white;border:1px solid #b9cbd7;border-radius:8px;min-height:42px}
+.badge{font-size:11px;background:#eef4f8;color:#486278;padding:4px 9px;border-radius:99px;white-space:nowrap}
+.badge.online{background:#e5f5ef;color:#126c52}.badge.offline{background:#fff0ee;color:#b52f32}
+.remaining{margin:0;line-height:1.15}.remaining strong{font-size:42px;font-weight:700;letter-spacing:-1px}.remaining span{color:var(--muted);font-size:13px}
+.quota-summary .muted{font-size:12px;margin:8px 0 0}.muted{color:var(--muted)}
+.slots{display:flex;gap:7px}.slot{height:9px;flex:1;min-width:0;background:#e5f4ef;border:1px solid #a8d8c9;border-radius:3px}.slot.used{background:var(--blue);border-color:var(--blue)}
+button{font:inherit;cursor:pointer;border:0;border-radius:9px;min-height:46px;padding:10px 14px;font-size:15px;font-weight:600}
+button:disabled,select:disabled{opacity:.6;cursor:wait}.primary{background:var(--blue);color:white;width:100%}.primary:hover{background:#1d4ed8}
+.feedback{font-size:13px;min-height:40px;margin:0;color:var(--muted);overflow-wrap:anywhere}.feedback.success{color:var(--teal)}.feedback.error{color:#b52f32}
+.next-slot{font-size:12px;color:#617788;margin:0;min-height:36px;border-top:1px solid var(--border);padding-top:12px}
+.timeline-card{padding:24px;display:flex;flex-direction:column;min-width:0;min-height:0}
+.timeline-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.timeline-header p{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.timeline-live{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--teal);background:#e5f5ef;padding:5px 10px;border-radius:99px;white-space:nowrap}
+.timeline-live::before{content:"";width:6px;height:6px;border-radius:50%;background:#087f70;animation:timeline-pulse 2s ease-in-out infinite}
+.timeline-legend{display:flex;align-items:center;flex-wrap:wrap;gap:8px 20px;margin:16px 0 0;font-size:12px;color:var(--muted)}
+.timeline-legend span{display:inline-flex;align-items:center;gap:7px}
+.legend-accepted{width:10px;height:10px;background:#148347;border-radius:50%}
+.legend-rejected{color:#ce3645;font-style:normal;font-size:20px;font-weight:700;line-height:10px}
+.legend-window{width:20px;height:12px;background:#e4f4f0;border:1px dashed #48a897;border-radius:3px}
+.timeline-plot{position:relative;flex:1;min-height:220px;display:flex;align-items:center;margin-top:10px}
+.timeline-plot svg{display:block;width:100%;height:270px;overflow:visible}
+.timeline-window{fill:#e4f4f0;stroke:#b7dfd4;stroke-width:1}.timeline-boundary{stroke:#6ba99b;stroke-width:1;stroke-dasharray:4 4}
+.timeline-window-label{fill:#087f70;font-size:12px;font-weight:600}.timeline-lane{stroke:#d9e3e9;stroke-width:1}
+.timeline-axis,.timeline-tick{stroke:#a8bbc7;stroke-width:1}.timeline-axis-label{fill:#617788;font:12px "Segoe UI",Arial,sans-serif}
+.timeline-now{stroke:#087f70;stroke-width:2;stroke-dasharray:4 4}.timeline-now-label{fill:#087f70;font-size:11px;font-weight:700;letter-spacing:.5px}
+.timeline-accepted{fill:#148347;stroke:white;stroke-width:2}.timeline-rejected{fill:none;stroke:#ce3645;stroke-width:3;stroke-linecap:round}
+.timeline-note{font-size:11px;line-height:1.5;color:var(--muted);margin:10px 0 0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+footer{font-size:11px;color:var(--muted)}
+a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #e4ab25;outline-offset:3px}
+@keyframes timeline-pulse{50%{opacity:.35}}
+@media(max-height:680px){.shell{padding:12px 20px;gap:10px}.controls{padding:16px;gap:10px}.remaining strong{font-size:36px}.feedback{min-height:32px}.next-slot{padding-top:8px;min-height:28px}.timeline-card{padding:16px 20px}.timeline-plot{min-height:180px;margin-top:5px}.timeline-plot svg{height:210px}.timeline-legend{margin-top:10px}.timeline-note{margin-top:5px}}
+@media(max-width:760px){.shell{padding:14px;gap:12px;min-height:640px}.brand-icon{width:36px;height:36px;font-size:14px;border-radius:10px}.page-header{gap:10px}h1{font-size:21px}.page-header p{font-size:11px}.workspace{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:12px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;padding:14px;align-items:center}.control-heading{margin-bottom:5px;flex-wrap:wrap;gap:3px}.badge{font-size:10px;padding:2px 6px}.quota-summary{text-align:right}.remaining strong{font-size:32px}.quota-summary .muted{margin-top:4px;font-size:11px}.controls .slots{grid-column:2;grid-row:2}.controls .primary{grid-column:1;grid-row:2;min-height:40px;font-size:13px}.feedback{grid-column:1/-1;min-height:20px;font-size:12px}.next-slot{display:none}.timeline-card{padding:14px}.timeline-header h2{font-size:16px}.timeline-header p{font-size:11px}.timeline-legend{font-size:11px;gap:6px 12px;margin-top:10px}.timeline-plot{min-height:180px;margin-top:5px}.timeline-plot svg{height:210px}.timeline-note{font-size:10px;margin-top:4px}footer{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.timeline-live::before{animation:none}}

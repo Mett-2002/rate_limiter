@@ -1,0 +1,28 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h2>{{ api_client.name }}</h2>
+{% if token %}
+<p>Key generated successfully. Copy it now; only its hash is stored.</p>
+<label for="issued-key">Secret API key (hidden)</label>
+<input id="issued-key" type="password" readonly value="{{ token }}" autocomplete="off"
+       style="display:block;width:min(90%,36rem);font-family:monospace;margin:12px 0">
+<button type="button" id="copy-key">Copy API key</button>
+<p id="copy-result" role="status"></p>
+<p>Send it as <code>Authorization: Bearer YOUR_KEY</code>.</p>
+<p><a href="{{ change_url }}">Return to API client configuration</a></p>
+<script>
+document.getElementById('copy-key').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(document.getElementById('issued-key').value);
+    document.getElementById('copy-result').textContent = 'API key copied.';
+  } catch (error) {
+    document.getElementById('issued-key').select();
+    document.getElementById('copy-result').textContent = 'Press Ctrl+C to copy the selected key.';
+  }
+});
+</script>
+{% else %}
+<p>Generating a new key revokes the previous key. Existing quota history remains.</p>
+<form method="post">{% csrf_token %}<input type="submit" value="Generate new API key"></form>
+{% endif %}
+{% endblock %}
