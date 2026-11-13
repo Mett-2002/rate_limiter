@@ -77,7 +77,7 @@ From the API folder, with Redis running:
 .\.venv\Scripts\python.exe manage.py test limiter --verbosity 2
 ```
 
-`limiter/test_engine.py` tests boundaries, expiry, isolation and concurrent calls against real Redis. `limiter/tests.py` tests authentication, validation, errors, models and Admin. Test keys use random prefixes and are cleaned up individually.
+`limiter/test_engine.py` tests boundaries, expiry, isolation and concurrent calls against real Redis. `limiter/tests.py` contains six core HTTP tests: acceptance/rejection, user isolation, non-consuming status, authentication, invalid input and Redis failure. Test keys use random prefixes and are cleaned up individually.
 
 From the demo folder, run `.\.venv\Scripts\python.exe manage.py test support`. These tests mock the HTTP connection to the API.
 
