@@ -74,7 +74,9 @@ SPECTACULAR_SETTINGS = {
         "**Consume** uses one slot when accepted. **Check status** consumes none. "
         "The default rule is 5 accepted requests per user in a rolling 60 seconds; "
         "each API client can have a different rule. The window is `(now - window, now]`. "
-        "Requests exactly one window old expire."
+        "Requests exactly one window old expire.\n\n"
+        "Response examples use the default rule and illustrative timestamps. "
+        "Click **Execute** to see the actual response for your client."
     ),
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,

@@ -1,7 +1,7 @@
 """Rate-limit API views."""
 from django.conf import settings
 from redis.exceptions import RedisError
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -9,8 +9,8 @@ from .authentication import APIClientAuthentication
 from .serializers import UserRequestSerializer
 from .services import check_limit, redis_backend
 from .schema import (
-    ERROR_RESPONSES, QUOTA_HEADERS, RETRY_HEADER, USER_ID,
-    HealthResponseSerializer, LimitResponseSerializer,
+    AUTH_HEADER, CONSUME_RESPONSES, HEALTH_RESPONSES, QUOTA_HEADERS,
+    RETRY_HEADER, STATUS_RESPONSES, USER_ID,
 )
 
 
@@ -20,7 +20,7 @@ class HealthView(APIView):
 
     @extend_schema(
         summary="Check Redis health", tags=["Health"], auth=[],
-        responses={200: HealthResponseSerializer, 503: HealthResponseSerializer},
+        responses=HEALTH_RESPONSES,
     )
     def get(self, request):
         try:
@@ -62,12 +62,8 @@ class ConsumeView(AuthenticatedClientView):
         summary="Consume one request", tags=["Limits"],
         description="Each accepted call consumes one slot. Rejected calls consume none. Only user_id is accepted.",
         request={"application/json": UserRequestSerializer},
-        parameters=[*QUOTA_HEADERS, RETRY_HEADER],
-        responses={
-            200: OpenApiResponse(LimitResponseSerializer, description="Request accepted; one slot consumed."),
-            429: OpenApiResponse(LimitResponseSerializer, description="Quota full; no slot consumed."),
-            **ERROR_RESPONSES,
-        },
+        parameters=[*QUOTA_HEADERS, RETRY_HEADER, AUTH_HEADER],
+        responses=CONSUME_RESPONSES,
     )
     def post(self, request):
         return self.limit_response(request, request.data, consume_request=True)
@@ -78,8 +74,11 @@ class StatusView(AuthenticatedClientView):
         summary="Check status", tags=["Limits"],
         description="Removes expired history without consuming capacity. Returns 200 even when allowed is false.",
         request=None,
-        parameters=[OpenApiParameter("user_id", USER_ID, required=True), *QUOTA_HEADERS],
-        responses={200: LimitResponseSerializer, **ERROR_RESPONSES},
+        parameters=[
+            OpenApiParameter("user_id", USER_ID, required=True, description=USER_ID["description"]),
+            *QUOTA_HEADERS, AUTH_HEADER,
+        ],
+        responses=STATUS_RESPONSES,
     )
     def get(self, request):
         return self.limit_response(request, request.query_params, consume_request=False)
